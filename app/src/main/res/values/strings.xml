@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Tomato Disease Detection</string>
+    <string name="app_description">Tomato Disease Detector v 1.0.0</string>
+    <string name="placeholder_image">Placeholder Image</string>
+    <string name="analyse">Analyse</string>
+    <string name="result">Result</string>
+    <string name="result_placeholder">...........</string>
+    <string name="logo">Logo</string>
+    <string name="login">Login</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="logout">Logout</string>
+</resources>
