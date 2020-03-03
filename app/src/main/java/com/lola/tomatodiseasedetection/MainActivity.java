@@ -2,13 +2,17 @@ package com.lola.tomatodiseasedetection;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
@@ -18,11 +22,15 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
     public static int OPEN_IMAGE_REQUEST_CODE = 101;
+    public static int REQUEST_IMAGE_CAPTURE = 102;
+    private String currentPhotoPath;
 
     ImageView tbImage;
     Button analyseImage;
@@ -42,11 +50,56 @@ public class MainActivity extends AppCompatActivity {
         resultTxtView = findViewById(R.id.result);
         tbImage = findViewById(R.id.tb_image);
         tbImage.setOnClickListener((v)->getImage());
+        tbImage.setOnLongClickListener((v) -> {
+            getCameraImage();
+            return true;
+        });
 
         analyseImage = findViewById(R.id.btn_analyze);
         analyseImage.setOnClickListener((v -> {
             analyzeImage();
         }));
+    }
+
+    private void getCameraImage() {
+        if (currentPhotoPath != null){
+            new File(currentPhotoPath).delete();
+        }
+        dispatchTakePictureIntent();
+    }
+
+    private void dispatchTakePictureIntent() {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null){
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            }catch (IOException e){
+
+            }
+            // Continue only if the File was successfully created
+            if (photoFile != null) {
+                Uri photoURI = FileProvider.getUriForFile(this,
+                        "com.lola.tomatodiseasedetection.fileprovider",
+                        photoFile);
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+            }
+        }
+    }
+
+    private File createImageFile() throws IOException{
+        // Create an image file name
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(
+                "image",  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir      /* directory */
+        );
+
+        // Save a file: path for use with ACTION_VIEW intents
+        currentPhotoPath = image.getAbsolutePath();
+        return image;
     }
 
     private void getImage(){
@@ -102,6 +155,9 @@ public class MainActivity extends AppCompatActivity {
                 if(data!=null){
                     Glide.with(MainActivity.this).load(data.getData()).override(400,400).into(tbImage);
                 }
+            }
+            if (requestCode==REQUEST_IMAGE_CAPTURE){
+                Glide.with(MainActivity.this).load(currentPhotoPath).into(tbImage);
             }
         }
     }
