@@ -10,4 +10,5 @@
     <string name="username">Username</string>
     <string name="password">Password</string>
     <string name="logout">Logout</string>
+    <string name="user_dont_want_permission_to_be_requested">dontWantToSeePermission</string>
 </resources>

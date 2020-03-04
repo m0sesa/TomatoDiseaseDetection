@@ -1,11 +1,10 @@
 package com.lola.tomatodiseasedetection;
 
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.FileProvider;
-
+import android.Manifest;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
@@ -13,6 +12,8 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.provider.Settings;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
@@ -20,14 +21,24 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+
 import com.bumptech.glide.Glide;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "MainActivity";
+
+    private static final int REQUEST_CAMERA_AND_STORAGE = 100;
     public static int OPEN_IMAGE_REQUEST_CODE = 101;
     public static int REQUEST_IMAGE_CAPTURE = 102;
     private String currentPhotoPath;
@@ -51,14 +62,95 @@ public class MainActivity extends AppCompatActivity {
         tbImage = findViewById(R.id.tb_image);
         tbImage.setOnClickListener((v)->getImage());
         tbImage.setOnLongClickListener((v) -> {
-            getCameraImage();
+            checkCameraPermission();
             return true;
         });
 
         analyseImage = findViewById(R.id.btn_analyze);
-        analyseImage.setOnClickListener((v -> {
-            analyzeImage();
-        }));
+        analyseImage.setOnClickListener((v -> analyzeImage()));
+    }
+
+    private void requestPermission(){
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                REQUEST_CAMERA_AND_STORAGE);
+    }
+
+    private void checkCameraPermission(){
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
+        || ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+            if (getIfUserDoNotWantPermissionToBeRequestedAnymore()){
+                showSettingsAlert();
+            // Should we show an explanation?
+            }else if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)
+                    ||ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)){
+                showAlert();
+            // No explanation needed, we can request the permission.
+            }else{
+                requestPermission();
+            }
+        }else{
+            getCameraImage();
+        }
+    }
+
+    private void showAlert() {
+        new AlertDialog.Builder(this)
+                .setTitle("Alert")
+                .setMessage("App needs to access the camera and store images")
+                .setNegativeButton("Don't Allow", (dialogInterface, i) -> {
+                    dialogInterface.dismiss();
+                    //finish();
+                })
+                .setPositiveButton("Allow", (dialogInterface, i) -> {
+                    dialogInterface.dismiss();
+                    requestPermission();
+                })
+                .create()
+                .show();
+    }
+
+    private void showSettingsAlert() {
+        new AlertDialog.Builder(this)
+                .setTitle("Alert")
+                .setMessage("App needs to access the camera and store images")
+                .setNegativeButton("Don't Allow", (dialogInterface, i) -> {
+                    dialogInterface.dismiss();
+                    //finish();
+                })
+                .setPositiveButton("Allow", (dialogInterface, i) -> {
+                    dialogInterface.dismiss();
+                    startInstalledAppDetailsActivity(this);
+                })
+                .create()
+                .show();
+    }
+
+    public static void startInstalledAppDetailsActivity(final Context context) {
+        if (context == null) {
+            return;
+        }
+
+        final Intent i = new Intent();
+        i.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        i.addCategory(Intent.CATEGORY_DEFAULT);
+        i.setData(Uri.parse("package:" + context.getPackageName()));
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        i.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+        i.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+        context.startActivity(i);
+    }
+
+    private boolean getIfUserDoNotWantPermissionToBeRequestedAnymore() {
+        return getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE)
+                .getBoolean(getString(R.string.user_dont_want_permission_to_be_requested), false);
+    }
+
+    private void setIfUserDoNotWantPermissionToBeRequestedAnymore() {
+        getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE)
+                .edit()
+                .putBoolean(getString(R.string.user_dont_want_permission_to_be_requested), true)
+                .apply();
     }
 
     private void getCameraImage() {
@@ -75,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 photoFile = createImageFile();
             }catch (IOException e){
-
+                if (e.getMessage() != null) {Log.e(TAG, e.getMessage());}
             }
             // Continue only if the File was successfully created
             if (photoFile != null) {
@@ -120,11 +212,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void analyzeImage() {
-        Random random = new Random();
         Bitmap bitmap = ((BitmapDrawable) tbImage.getDrawable()).getBitmap();
-        int width = bitmap.getWidth();
-        int height = bitmap.getHeight();
-        int minDim = (width>height)?height:width;
 
         // check if image is the same as placeholder image
         if (bitmap.getWidth() == 403 && bitmap.getHeight() == 450){
@@ -169,15 +257,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()){
-            case R.id.logout:
-                startActivity(new Intent(MainActivity.this, LoginActivity.class));
-                finish();
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        startActivity(new Intent(MainActivity.this, LoginActivity.class));
+        finish();
 
-                getSharedPreferences(LoginActivity.TB_PREF,MODE_PRIVATE).edit()
-                        .putBoolean(LoginActivity.LOGIN_STATUS,false).apply();
-        }
+        getSharedPreferences(LoginActivity.TB_PREF,MODE_PRIVATE).edit()
+                .putBoolean(LoginActivity.LOGIN_STATUS,false).apply();
+
         return super.onOptionsItemSelected(item);
     }
 
@@ -200,4 +286,26 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CAMERA_AND_STORAGE){
+            if (grantResults[0] == PackageManager.PERMISSION_DENIED || grantResults[1] == PackageManager.PERMISSION_DENIED){
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)
+                || ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)){
+                    showAlert();
+                }else{
+                    // user denied flagging NEVER ASK AGAIN
+                    // you can either enable some fall back,
+                    // disable features of your app
+                    // or open another dialog explaining
+                    // again the permission and directing to
+                    // the app setting
+                    setIfUserDoNotWantPermissionToBeRequestedAnymore();
+                }
+            }else{
+                getCameraImage();
+            }
+        }
+    }
 }
