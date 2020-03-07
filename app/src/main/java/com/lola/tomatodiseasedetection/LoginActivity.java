@@ -20,11 +20,6 @@ import java.util.Objects;
 
 public class LoginActivity extends AppCompatActivity {
 
-    public static String USER_NAME = "user_name";
-    public static String LOGIN_STATUS = "login_status";
-
-    public static String TB_PREF = "tb_preference";
-
     boolean isLoggedIn;
     String user;
 
@@ -46,14 +41,14 @@ public class LoginActivity extends AppCompatActivity {
 
 
         // set up sharedPreference and get stored values
-        sharedPreferences = getSharedPreferences(TB_PREF, MODE_PRIVATE);
-        user = sharedPreferences.getString(USER_NAME, "");
-        isLoggedIn = sharedPreferences.getBoolean(LOGIN_STATUS, false);
+        sharedPreferences = getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
+        user = sharedPreferences.getString(getString(R.string.username), "");
+        isLoggedIn = sharedPreferences.getBoolean(getString(R.string.login_status), false);
 
 
         if (isLoggedIn) {
             Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-            intent.putExtra(USER_NAME, user);
+            intent.putExtra(getString(R.string.username), user);
             startActivity(intent);
             finish();
         }
@@ -114,8 +109,8 @@ public class LoginActivity extends AppCompatActivity {
 
     private void saveUserSharedPreference(String username) {
         SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString(USER_NAME, username);
-        editor.putBoolean(LOGIN_STATUS, true);
+        editor.putString(getString(R.string.username), username);
+        editor.putBoolean(getString(R.string.login_status), true);
         editor.apply();
     }
 }

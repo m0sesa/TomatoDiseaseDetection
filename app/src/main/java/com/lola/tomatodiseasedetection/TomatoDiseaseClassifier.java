@@ -21,7 +21,7 @@ class TomatoDiseaseClassifier {
     private static final int CHANNELS = 3;
 
     private Interpreter tfliteInterpreter;
-    private float[][] output= new float[1][10]; //
+    private float[][] output= new float[1][10]; //the output is a 1x10 tensor
 
     TomatoDiseaseClassifier(Activity activity){
         tfliteInterpreter = new Interpreter(loadModelFile(activity));
@@ -51,6 +51,7 @@ class TomatoDiseaseClassifier {
     }
 
     private ByteBuffer convertImageToByteBufferAndResize(Bitmap image){
+        // The model works with bytebuffer and not the raw image.
 
         Bitmap scaledBitmap = scaleBitmap(image);
 
@@ -76,30 +77,22 @@ class TomatoDiseaseClassifier {
     }
 
     private Bitmap scaleBitmap(Bitmap image){
+        // scale the bitmap to the size of the input tensor of the model
         return Bitmap.createScaledBitmap(image,IMAGE_WIDTH,IMAGE_HEIGHT, true);
     }
 
     TomatoDiseaseResults getResult(Bitmap bitmap){
+        // the run method takes in 2 arguments, one with the image and the second argument is where
+        // the result will be stored
         tfliteInterpreter.run(convertImageToByteBufferAndResize(bitmap),output);
         float[] result = output[0];
 
         int max = argMax(result);
 
-        switch (max){
-            case 0:return TomatoDiseaseResults.BACTERIAL_SPOT;
-            case 1:return TomatoDiseaseResults.EARLY_BLIGHT;
-            case 2:return TomatoDiseaseResults.LATE_BLIGHT;
-            case 3:return TomatoDiseaseResults.LEAF_MOLD;
-            case 4:return TomatoDiseaseResults.SEPTORIA_LEAF_SPOT;
-            case 5:return TomatoDiseaseResults.SPIDER_MITES;
-            case 6:return TomatoDiseaseResults.TARGET_SPOT;
-            case 7:return TomatoDiseaseResults.TOMATO_YELLOW_LEAF_CURL_VIRUS;
-            case 8:return TomatoDiseaseResults.TOMATO_MOSAIC_VIRUS;
-            case 9:return TomatoDiseaseResults.HEALTHY;
-            default:return TomatoDiseaseResults.ERROR;
-        }
+        return TomatoDiseaseResults.values()[max];
     }
 
+    // find and return the index of the array element with the maximum value
     private int argMax(float[] prediction){
         float max = prediction[0];
         int position = 0;
