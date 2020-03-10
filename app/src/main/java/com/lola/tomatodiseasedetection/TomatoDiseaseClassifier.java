@@ -28,7 +28,7 @@ class TomatoDiseaseClassifier {
     }
 
     private MappedByteBuffer loadModelFile(Activity activity) {
-        String model = "model.tflite";
+        String model = "vgg16_model.tflite";
         AssetFileDescriptor fileDescriptor = null;
         MappedByteBuffer mappedByteBuffer = null;
         try {
